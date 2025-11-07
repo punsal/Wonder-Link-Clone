@@ -6,9 +6,12 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
+    [Header("Camera")]
+    [SerializeField] private CameraManager cameraManager;
+    
     [Header("Board")]
-    [SerializeField] private int rowCount;
-    [SerializeField] private int columnCount;
+    [SerializeField, Range(4, 12)] private int rowCount;
+    [SerializeField, Range(4, 12)] private int columnCount;
     [SerializeField] private Tile tilePrefab;
     
     [Header("Chip")]
@@ -27,12 +30,24 @@ public class GameManager : MonoBehaviour
     {
         _board.Initialize();
         CreateChips();
+        CenterCameraOnBoard();
     }
     
     private void OnDisable()
     {
         DestroyChips();
         _board.Dispose();
+    }
+
+    private void CenterCameraOnBoard()
+    {
+        if (cameraManager == null)
+        {
+            Debug.LogWarning("Camera manager is null");
+            return;
+        }
+        
+        cameraManager.CenterOnBoard(rowCount, columnCount);
     }
 
     private void CreateChips()
