@@ -33,6 +33,10 @@ namespace Board
                 for (var j = 0; j < ColumnCount; j++)
                 {
                     var tile = Tiles[i, j];
+                    if (tile == null)
+                    {
+                        continue;
+                    }
                     tile.Dispose();
                 }
             }
