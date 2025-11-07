@@ -1,18 +1,30 @@
-using System.Collections;
-using System.Collections.Generic;
+using Board.Abstract;
+using Board.Interface;
 using UnityEngine;
 
-public class Chip : MonoBehaviour
+public class Chip : MonoBehaviour, ITileOccupant
 {
-    // Start is called before the first frame update
-    void Start()
+    public TileBase Tile { get; private set; }
+
+    public void Occupy(TileBase tile)
     {
+        if (Tile != null)
+        {
+            Debug.LogError("Chip already has a tile");
+            return;
+        }
         
+        Tile = tile;
+        Move(tile.Position);
     }
 
-    // Update is called once per frame
-    void Update()
+    public void Release()
     {
-        
+        Tile = null;
+    }
+
+    private void Move(Vector3 position)
+    {
+        transform.position = position;
     }
 }

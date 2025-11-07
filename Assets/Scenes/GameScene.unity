@@ -223,6 +223,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 339806931}
+  - component: {fileID: 339806932}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -245,6 +246,26 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &339806932
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 339806930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ac3892d3f11f487fb8cba2aaf7d710f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  rowCount: 3
+  columnCount: 4
+  tilePrefab: {fileID: 6785040750516963991, guid: 96cf378c278da4ffba4d461ca63f0724, type: 3}
+  chipPrefabs:
+  - {fileID: 6547929312675276484, guid: 730ba60145a1e4856bb1b51ab83edf50, type: 3}
+  - {fileID: 6547929312675276484, guid: 8d6882920cc294ac991826495599bbca, type: 3}
+  - {fileID: 6547929312675276484, guid: 02c34ad20f1b84b3f802139fe54ebbed, type: 3}
+  - {fileID: 6547929312675276484, guid: d1cf16941254d409b802e2abcb738134, type: 3}
 --- !u!1 &1177839870
 GameObject:
   m_ObjectHideFlags: 0
