@@ -1,5 +1,5 @@
-using Gameplay.Link.Interface;
-using Gameplay.Link.Type;
+using Core.Link.Interface;
+using Core.Link.Type;
 using UnityEngine;
 
 namespace Gameplay
@@ -10,7 +10,7 @@ namespace Gameplay
     /// and adjacency checks specific to a chip.
     /// </summary>
     public class Chip : LinkableBase
-    { 
+    {
         protected override void Move(Vector3 position)
         {
             transform.position = position;
@@ -27,7 +27,7 @@ namespace Gameplay
             // visual feedback
             transform.localScale = Vector3.one;
         }
-        
+
         public override bool IsTypeMatch(LinkType type)
         {
             return type == LinkType;
@@ -35,27 +35,30 @@ namespace Gameplay
 
         public override bool IsAdjacent(LinkableBase other)
         {
-            if (Tile == null)
+            if (!Tile)
             {
+                // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
                 Debug.LogWarning("Tile is null");
                 return false;
             }
-        
-            if (other == null)
+
+            if (!other)
             {
+                // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
                 Debug.LogWarning("Other is null");
                 return false;
             }
 
-            if (other.Tile == null)
+            if (!other.Tile)
             {
+                // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
                 Debug.LogWarning("Other tile is null");
                 return false;
             }
-        
+
             var rowDiff = Mathf.Abs(Tile.Row - other.Tile.Row);
             var columnDiff = Mathf.Abs(Tile.Column - other.Tile.Column);
-        
+
             // force horizontal or vertical
             return (rowDiff == 1 && columnDiff == 0) || (rowDiff == 0 && columnDiff == 1);
         }
