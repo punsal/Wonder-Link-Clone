@@ -22,9 +22,9 @@ namespace Core.Board.Abstract
         private void Awake()
         {
             _isDestroyed = false;
+            OnAwake();
         }
-
-        // ReSharper disable once UnusedMember.Global
+        
         protected abstract void OnAwake();
 
         private void OnDestroy()
