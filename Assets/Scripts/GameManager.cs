@@ -59,14 +59,17 @@ public class GameManager : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
+            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
             _linkSystem.StartDrag();
         }
         else if (Input.GetMouseButton(0) && _linkSystem.IsDragging)
         {
+            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
             _linkSystem.UpdateDrag();
         }
         else if (Input.GetMouseButtonUp(0) && _linkSystem.IsDragging)
         {
+            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
             _linkSystem.EndDrag();
         }
     }
