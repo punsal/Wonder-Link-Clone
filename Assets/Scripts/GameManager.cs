@@ -6,9 +6,9 @@ using Core.Camera;
 using Core.Camera.Abstract;
 using Core.Camera.Provider;
 using Core.Camera.Provider.Abstract;
-using Gameplay.Link;
-using Gameplay.Link.Abstract;
-using Gameplay.Link.Interface;
+using Core.Link;
+using Core.Link.Abstract;
+using Core.Link.Interface;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
