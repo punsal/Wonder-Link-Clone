@@ -9,7 +9,7 @@ namespace Core.Camera.Provider
     /// </summary>
     public class FallbackCameraProvider : ICameraProvider
     {
-        public UnityEngine.Camera Camera { get; private set; }
+        public UnityEngine.Camera Camera { get; }
 
         public FallbackCameraProvider(UnityEngine.Camera camera)
         {
