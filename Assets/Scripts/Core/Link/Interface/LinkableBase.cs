@@ -1,9 +1,9 @@
 using Core.Board.Abstract;
 using Core.Board.Interface;
-using Gameplay.Link.Type;
+using Core.Link.Type;
 using UnityEngine;
 
-namespace Gameplay.Link.Interface
+namespace Core.Link.Interface
 {
     /// <summary>
     /// Represents a base class for objects that can be linked and interact with tiles on a game board.
@@ -44,10 +44,12 @@ namespace Gameplay.Link.Interface
             }
 
             _isLinked = true;
+            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
             Tile?.Highlight();
             
             OnLinked();
             
+            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
             Debug.Log($"Linked chip {name} at [{Tile?.Row:00}, {Tile?.Column:00}]");
         }
 
@@ -61,10 +63,12 @@ namespace Gameplay.Link.Interface
             }
             
             _isLinked = false;
+            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
             Tile?.Conceal();
             
             OnUnlinked();
             
+            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
             Debug.Log($"Unlinked chip {name} at [{Tile?.Row:00}, {Tile?.Column:00}]");
         }
         

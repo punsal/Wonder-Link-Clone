@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using Core.Camera.Provider.Interface;
-using Gameplay.Link.Interface;
+using Core.Link.Interface;
 using UnityEngine;
 
-namespace Gameplay.Link.Abstract
+namespace Core.Link.Abstract
 {
     /// <summary>
     /// Abstract base class for managing linking mechanisms within a gameplay system.

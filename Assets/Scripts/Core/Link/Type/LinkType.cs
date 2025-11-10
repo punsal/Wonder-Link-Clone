@@ -1,4 +1,4 @@
-namespace Gameplay.Link.Type
+namespace Core.Link.Type
 {
     /// <summary>
     /// Represents the type of a link within the system.
@@ -9,9 +9,13 @@ namespace Gameplay.Link.Type
     /// </remarks>
     public enum LinkType
     {
+        // ReSharper disable once UnusedMember.Global
         Red,
+        // ReSharper disable once UnusedMember.Global
         Green,
+        // ReSharper disable once UnusedMember.Global
         Blue,
+        // ReSharper disable once UnusedMember.Global
         Yellow
     }
 }
