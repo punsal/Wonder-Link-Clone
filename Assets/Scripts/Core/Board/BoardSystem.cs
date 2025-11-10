@@ -1,20 +1,30 @@
-using Board.Abstract;
+using Core.Board.Abstract;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Board
+namespace Core.Board
 {
-    public class GameBoard : BoardBase
+    /// <summary>
+    /// Represents the main implementation of a board system. Handles board creation, tile instantiation,
+    /// and board lifecycle management. It derives from the abstract BoardSystemBase class.
+    /// </summary>
+    public class BoardSystem : BoardSystemBase
     {
         private readonly Tile _tilePrefab;
 
-        public GameBoard(int rowCount, int columnCount, Tile tilePrefab) : base(rowCount, columnCount)
+        public BoardSystem(int rowCount, int columnCount, Tile tilePrefab) : base(rowCount, columnCount)
         {
             _tilePrefab = tilePrefab;
         }
         
         public override void Initialize()
         {
+            if (_tilePrefab == null)
+            {
+                Debug.LogWarning("Tile prefab is null, will not initialize board");
+                return;
+            }
+            
             for (var i = 0; i < RowCount; i++)
             {
                 for (var j = 0; j < ColumnCount; j++)

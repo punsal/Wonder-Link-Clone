@@ -1,19 +1,23 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Board.Interface;
+using Core.Board.Interface;
 using UnityEngine;
 
-namespace Board.Abstract
+namespace Core.Board.Abstract
 {
-    public abstract class BoardBase : IDisposable
+    /// <summary>
+    /// Represents a base class for a board system. Provides functionality for board initialization, tile management,
+    /// and occupant handling. This class serves as an abstraction for deriving specific board systems.
+    /// </summary>
+    public abstract class BoardSystemBase : IDisposable
     {
         protected int RowCount { get; }
         protected int ColumnCount { get; }
         protected TileBase[,] Tiles { get; }
-        private List<ITileOccupant> _occupants;
+        private readonly List<ITileOccupant> _occupants;
 
-        protected BoardBase(int rowCount, int columnCount)
+        protected BoardSystemBase(int rowCount, int columnCount)
         {
             RowCount = rowCount;
             ColumnCount = columnCount;
