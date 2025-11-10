@@ -224,7 +224,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 291563688}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 68b329cc426b4a55b443d403f04ee9bd, type: 3}
+  m_Script: {fileID: 11500000, guid: d651d3f52e4b4f228c218d258d5f57ae, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1 &339806930
@@ -271,15 +271,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ac3892d3f11f487fb8cba2aaf7d710f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cameraManager: {fileID: 291563692}
-  rowCount: 12
-  columnCount: 12
+  gameCameraProvider: {fileID: 291563692}
+  rowCount: 8
+  columnCount: 8
   tilePrefab: {fileID: 6785040750516963991, guid: 96cf378c278da4ffba4d461ca63f0724, type: 3}
   chipPrefabs:
   - {fileID: 6547929312675276484, guid: 730ba60145a1e4856bb1b51ab83edf50, type: 3}
   - {fileID: 6547929312675276484, guid: 8d6882920cc294ac991826495599bbca, type: 3}
   - {fileID: 6547929312675276484, guid: 02c34ad20f1b84b3f802139fe54ebbed, type: 3}
   - {fileID: 6547929312675276484, guid: d1cf16941254d409b802e2abcb738134, type: 3}
+  linkCameraProvider: {fileID: 291563692}
+  linkLayerMask:
+    serializedVersion: 2
+    m_Bits: 64
 --- !u!1 &1177839870
 GameObject:
   m_ObjectHideFlags: 0

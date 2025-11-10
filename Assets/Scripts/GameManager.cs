@@ -1,13 +1,21 @@
 using System.Collections.Generic;
 using System.Linq;
-using Board;
-using Board.Abstract;
+using Core.Board;
+using Core.Board.Abstract;
+using Core.Camera;
+using Core.Camera.Abstract;
+using Core.Camera.Provider;
+using Core.Camera.Provider.Abstract;
+using Gameplay.Link;
+using Gameplay.Link.Abstract;
+using Gameplay.Link.Interface;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class GameManager : MonoBehaviour
 {
     [Header("Camera")]
-    [SerializeField] private CameraManager cameraManager;
+    [SerializeField] private UnityCameraProviderBase gameCameraProvider;
     
     [Header("Board")]
     [SerializeField, Range(4, 12)] private int rowCount;
@@ -15,39 +23,110 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Tile tilePrefab;
     
     [Header("Chip")]
-    [SerializeField] private Chip[] chipPrefabs;
+    [SerializeField] private LinkableBase[] chipPrefabs;
+    
+    [Header("Linking")]
+    [SerializeField] private UnityCameraProviderBase linkCameraProvider;
+    [SerializeField] private LayerMask linkLayerMask;
 
-    private BoardBase _board;
-    private List<Chip> _chips;
+    private CameraSystemBase _cameraSystem;
+    private BoardSystemBase _boardSystem;
+    private LinkSystemBase _linkSystem;
+    private List<LinkableBase> _chips;
     
     private void Awake()
     {
-        _board = new GameBoard(rowCount, columnCount, tilePrefab);
-        _chips = new List<Chip>();
+        CreateGameCameraSystem();
+        CreateBoardSystem();
+        CreateLinkSystem();
+        _chips = new List<LinkableBase>();
     }
     
     private void OnEnable()
     {
-        _board.Initialize();
-        CreateChips();
-        CenterCameraOnBoard();
-    }
-    
-    private void OnDisable()
-    {
-        DestroyChips();
-        _board.Dispose();
+        _boardSystem.Initialize();
+        
+        _linkSystem.OnInputCompleted += HandleLinkComplete;
     }
 
-    private void CenterCameraOnBoard()
+    private void Start()
     {
-        if (cameraManager == null)
+        CreateChips();
+        _cameraSystem.CenterOnBoard(rowCount, columnCount);
+    }
+
+    private void Update()
+    {
+        if (Input.GetMouseButtonDown(0))
         {
-            Debug.LogWarning("Camera manager is null");
-            return;
+            _linkSystem.StartDrag();
         }
+        else if (Input.GetMouseButton(0) && _linkSystem.IsDragging)
+        {
+            _linkSystem.UpdateDrag();
+        }
+        else if (Input.GetMouseButtonUp(0) && _linkSystem.IsDragging)
+        {
+            _linkSystem.EndDrag();
+        }
+    }
+
+    private void OnDisable()
+    {
+        _linkSystem.OnInputCompleted -= HandleLinkComplete;
         
-        cameraManager.CenterOnBoard(rowCount, columnCount);
+        DestroyChips();
+        _boardSystem.Dispose();
+    }
+
+    private void CreateGameCameraSystem()
+    {
+        if (gameCameraProvider == null)
+        {
+            Debug.LogWarning("Game camera provider is null");
+            if (Camera.main == null)
+            {
+                Debug.LogError("No main camera found");
+                _cameraSystem = new CameraSystem(null);
+            }
+            else
+            {
+                Debug.LogWarning("Using main camera");
+                _cameraSystem = new CameraSystem(new FallbackCameraProvider(Camera.main));
+            }
+        }
+        else
+        {
+            _cameraSystem = new CameraSystem(gameCameraProvider);
+        }
+    }
+
+    private void CreateBoardSystem()
+    {
+        if (tilePrefab == null)
+        {
+            Debug.LogError("Tile prefab is null");
+        }
+        _boardSystem = new BoardSystem(rowCount, columnCount, tilePrefab);
+    }
+
+    private void CreateLinkSystem()
+    {
+        if (linkCameraProvider == null)
+        {
+            Debug.LogWarning("Link camera provider is null");
+            if (Camera.main == null)
+            {
+                Debug.LogError("No main camera found");
+                _linkSystem = new LinkSystem(null, linkLayerMask);
+            }
+            else
+            {
+                Debug.LogWarning("Using main camera");
+                _linkSystem = new LinkSystem(new FallbackCameraProvider(Camera.main), linkLayerMask);
+            }
+        }
+        _linkSystem = new LinkSystem(linkCameraProvider, linkLayerMask);
     }
 
     private void CreateChips()
@@ -56,7 +135,7 @@ public class GameManager : MonoBehaviour
         var boardSize = rowCount * columnCount;
         for (var i = 0; i < boardSize; i++)
         {
-            if (!_board.TryGetEmptyTile(out var emptyTile))
+            if (!_boardSystem.TryGetEmptyTile(out var emptyTile))
             {
                 Debug.LogWarning("No empty tiles");
                 break;
@@ -65,8 +144,20 @@ public class GameManager : MonoBehaviour
             var chipPrefab = chipPrefabs[randomIndex];
             var chip = Instantiate(chipPrefab, Vector3.zero, Quaternion.identity);
             chip.Occupy(emptyTile);
-            _board.AddOccupant(chip);
+            _boardSystem.AddOccupant(chip);
             _chips.Add(chip);
+        }
+    }
+
+    private void HandleLinkComplete(List<LinkableBase> linkables)
+    {
+        Debug.Log($"Link complete: {linkables.Count}");
+        
+        // TODO: Implement chip destruction and scoring logic
+        // For now, just log the positions
+        foreach (var linkable in linkables)
+        {
+            Debug.Log($"Matched chip at ({linkable.Tile.Row}, {linkable.Tile.Column})");
         }
     }
 
@@ -96,7 +187,7 @@ public class GameManager : MonoBehaviour
             }
             
             chip.Release();
-            _board.RemoveOccupant(chip);
+            _boardSystem.RemoveOccupant(chip);
             Destroy(chip.gameObject);
         }
     }
