@@ -10,7 +10,7 @@ namespace Core.Camera.Abstract
     public abstract class CameraSystemBase
     {
         private readonly ICameraProvider _cameraProvider;
-        protected UnityEngine.Camera Camera => _cameraProvider.Camera;
+        protected UnityEngine.Camera Camera => _cameraProvider.Instance;
         
         protected CameraSystemBase(ICameraProvider cameraProvider)
         {

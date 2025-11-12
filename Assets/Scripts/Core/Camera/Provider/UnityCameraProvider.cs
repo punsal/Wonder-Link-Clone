@@ -11,7 +11,8 @@ namespace Core.Camera.Provider
     public class UnityCameraProvider : UnityCameraProviderBase
     {
         private UnityEngine.Camera _camera;
-        public override UnityEngine.Camera Camera => _camera;
+
+        public override UnityEngine.Camera Instance => _camera;
 
         private void Awake()
         {

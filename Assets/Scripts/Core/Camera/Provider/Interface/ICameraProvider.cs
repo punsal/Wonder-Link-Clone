@@ -1,11 +1,17 @@
+using Core.Provider.Interface;
+
 namespace Core.Camera.Provider.Interface
 {
     /// <summary>
-    /// Provides access to a camera instance, enabling interaction with camera
-    /// functionality in a game or application context.
+    /// Defines an interface for providing instances of Unity camera objects.
     /// </summary>
-    public interface ICameraProvider
+    /// <remarks>
+    /// This interface is used to abstract the retrieval of a specific Unity camera instance,
+    /// allowing for different implementations of camera provisioning. It extends the generic
+    /// provider interface, `IProvider`, tailored for `UnityEngine.Camera`.
+    /// </remarks>
+    public interface ICameraProvider : IProvider<UnityEngine.Camera>
     {
-        UnityEngine.Camera Camera { get; }
+        
     }
 }

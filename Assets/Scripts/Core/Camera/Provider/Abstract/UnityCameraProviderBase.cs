@@ -10,6 +10,6 @@ namespace Core.Camera.Provider.Abstract
     /// </summary>
     public abstract class UnityCameraProviderBase : MonoBehaviour, ICameraProvider
     {
-        public abstract UnityEngine.Camera Camera { get; }
+        public abstract UnityEngine.Camera Instance { get; }
     }
 }

@@ -3,17 +3,20 @@ using Core.Camera.Provider.Interface;
 namespace Core.Camera.Provider
 {
     /// <summary>
-    /// Provides a fallback implementation of the `ICameraProvider` interface.
-    /// It is used to supply a default camera instance when no specific camera provider
-    /// is available.
+    /// Provides a fallback implementation of the <see cref="ICameraProvider"/> interface,
+    /// which uses a pre-defined Unity camera instance as the source.
     /// </summary>
+    /// <remarks>
+    /// This class is typically utilized when no specific camera provider is available,
+    /// and the default Unity main camera (or another fallback camera) should be used.
+    /// </remarks>
     public class FallbackCameraProvider : ICameraProvider
     {
-        public UnityEngine.Camera Camera { get; }
+        public UnityEngine.Camera Instance { get; }
 
-        public FallbackCameraProvider(UnityEngine.Camera camera)
+        public FallbackCameraProvider(UnityEngine.Camera instance)
         {
-            Camera = camera;
+            Instance = instance;
         }
     }
 }
