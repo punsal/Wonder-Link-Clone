@@ -1,57 +1,39 @@
+using Core.Link.Abstract;
 using Core.Link.Interface;
 using Core.Link.Type;
+using Gameplay.Chip.Abstract;
 using UnityEngine;
 
-namespace Gameplay
+namespace Gameplay.Chip
 {
     /// <summary>
     /// Represents a chip that can be linked and interacts with the game board.
     /// Inherits from <see cref="LinkableBase"/> to provide behavior for linking
     /// and adjacency checks specific to a chip.
     /// </summary>
-    public class Chip : LinkableBase
+    public class BasicChip : ChipBase
     {
-        protected override void Move(Vector3 position)
-        {
-            transform.position = position;
-        }
-
-        protected override void OnLinked()
-        {
-            // visual feedback
-            transform.localScale *= 1.2f;
-        }
-
-        protected override void OnUnlinked()
-        {
-            // visual feedback
-            transform.localScale = Vector3.one;
-        }
-
         public override bool IsTypeMatch(LinkType type)
         {
             return type == LinkType;
         }
 
-        public override bool IsAdjacent(LinkableBase other)
+        public override bool IsAdjacent(ILinkable other)
         {
-            if (!Tile)
+            if (Tile == null)
             {
-                // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
                 Debug.LogWarning("Tile is null");
                 return false;
             }
 
-            if (!other)
+            if (other == null)
             {
-                // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
                 Debug.LogWarning("Other is null");
                 return false;
             }
 
-            if (!other.Tile)
+            if (other.Tile == null)
             {
-                // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
                 Debug.LogWarning("Other tile is null");
                 return false;
             }

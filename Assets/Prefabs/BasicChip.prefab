@@ -9,11 +9,12 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8628503776589976256}
-  - component: {fileID: 3222979563301846834}
   - component: {fileID: 5216026267124966923}
   - component: {fileID: 8463158849268234617}
+  - component: {fileID: 3222979563301846834}
+  - component: {fileID: 1654808568020959672}
   m_Layer: 6
-  m_Name: Chip
+  m_Name: BasicChip
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -34,19 +35,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &3222979563301846834
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8082234871904172506}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7aad7ae39e98448298b1f06b634dd752, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  linkType: 0
 --- !u!212 &5216026267124966923
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -134,3 +122,32 @@ CircleCollider2D:
   m_Offset: {x: 0, y: 0}
   serializedVersion: 2
   m_Radius: 0.45
+--- !u!114 &3222979563301846834
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8082234871904172506}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7aad7ae39e98448298b1f06b634dd752, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  linkType: 0
+  animator: {fileID: 1654808568020959672}
+--- !u!114 &1654808568020959672
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8082234871904172506}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39f7a435301d4362982b34ab0ac1afec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  linkScaleMultiplier: 1.2
+  destroyDuration: 0.2
+  moveDuration: 0.2
