@@ -1,6 +1,6 @@
 # Chip System
 
-Manages chip lifecycle, spawning, destruction, and queries for board-based gameplay. Provides abstraction for different chip types with component-based animation and centralized chip management.
+Manages chip lifecycle, spawning, destruction, and spatial queries for board-based match-3 gameplay. Uses component-based architecture for flexible visual effects and centralized chip management.
 
 ## Structure
 
@@ -11,53 +11,52 @@ Manages chip lifecycle, spawning, destruction, and queries for board-based gamep
   - **Abstract/**
     - **ChipAnimatorComponentBase.cs** - Abstract animator component
   - **ChipAnimatorComponent.cs** - Concrete tween-based animator
-- **BasicChip.cs** - Concrete chip implementation with standard behavior
+- **BasicChip.cs** - Concrete chip with standard match-3 behavior
 - **ChipManager.cs** - Concrete chip manager implementation
 
-## Architecture Overview
+## Architecture
 ```
 
-LinkableBase (Core.Link)
+ILinkable (Core.Link)
+└── LinkableBase (Core.Link)
 └── ChipBase (abstract - game entity)
-└── BasicChip (concrete - standard chip)
-└── ChipAnimatorComponent (component - visual effects)
+├── BasicChip (concrete - standard chip)
+└── [Component] ChipAnimatorComponentBase
 ```
 **Design Philosophy:**
-- **ChipBase** = Game entity abstraction (movement, destruction, components)
-- **LinkableBase** = Board interaction contract (linking, adjacency, tile occupancy)
-- **ChipAnimatorComponent** = Swappable visual effects system
+- **ChipBase** = Game entity with component management (movement, destruction, effects)
+- **LinkableBase** = Board interaction (linking, adjacency, tile occupancy)
+- **ChipAnimatorComponent** = Swappable visual effects via composition
 
 ---
 
 ## Key Components
 
 ### ChipBase
-Abstract base class representing a game chip entity with component support.
+Abstract base class for chip entities with component-based animation.
 
 **Responsibilities:**
-- Component management (animator, movement, effects)
-- Visual feedback for linking/unlinking
+- Component management (animator reference)
+- Visual feedback delegation (link/unlink)
 - Destruction animation coordination
 - Movement delegation to animator
 
 **Key Methods:**
-- `Destroy()` - Triggers destruction animation
-- `MoveTo(position, duration)` - Animates chip movement
-- `OnLinked()` - Delegates to animator for link effect
-- `OnUnlinked()` - Delegates to animator for unlink effect
-- `OnAwake()` - Virtual hook for initialization
+- `Destroy()` - Triggers destruction animation via animator
+- `MoveTo(position, duration)` - Delegates movement to animator
+- `OnLinked()` - Delegates to `animator.PlayLinkEffect()`
+- `OnUnlinked()` - Delegates to `animator.PlayUnlinkEffect()`
+- `OnAwake()` - Virtual hook for derived class initialization
 
 **Component Integration:**
 ```
 csharp
-[Header("Components")]
 [SerializeField] private ChipAnimatorComponentBase animator;
 ```
-**Design Notes:**
-- Uses **composition over inheritance** for animations
-- Animator components are swappable at runtime
-- Protected `OnAwake()` allows derived classes to extend initialization
-- Delegates visual effects to specialized components
+**Design Benefits:**
+- Composition over inheritance for animations
+- Swappable animator components
+- Testable (can mock animators)
 
 ---
 
@@ -68,87 +67,85 @@ Abstract MonoBehaviour component for chip visual effects.
 - Link/unlink visual feedback
 - Destruction animations
 - Movement animations
-- Animation state management
+- Animation state management (current coroutine tracking)
 
 **Key Methods:**
-- `PlayLinkEffect()` - Visual feedback when chip is linked
-- `PlayUnlinkEffect()` - Visual feedback when chip is unlinked
-- `AnimateDestruction()` - Destruction animation (scale down)
-- `AnimateMovement(target, duration)` - Smooth position transition
+- `PlayLinkEffect()` - Visual feedback when linked
+- `PlayUnlinkEffect()` - Visual feedback when unlinked
+- `AnimateDestruction()` - Scale-down animation
+- `AnimateMovement(target, duration)` - Position transition
 
 **Design Benefits:**
-- **Swappable implementations**: Easily switch between tween, Animator, or physics-based
-- **Testable**: Can mock animations in unit tests
-- **Reusable**: Same animator can be used on different chip types
+- Swappable implementations (tween, Animator, physics, DOTween)
+- Reusable across different chip types
+- Unit test friendly
 
 ---
 
 ### ChipAnimatorComponent
-Concrete implementation using coroutine-based tweening.
+Concrete coroutine-based tween animator.
 
 **Features:**
-- **Link Effect**: Scales chip up by 1.2x
-- **Unlink Effect**: Resets scale to original
-- **Destruction**: Smooth scale-down to zero over 0.2s
-- **Movement**: Lerp-based position animation
+- Link: Scales up 1.2x
+- Unlink: Resets to original scale
+- Destruction: Scale-down to zero (0.2s)
+- Movement: Lerp-based position (0.2s)
 
 **Configuration:**
 ```
 csharp
-[Header("Settings")]
 [SerializeField] private float linkScaleMultiplier = 1.2f;
 [SerializeField] private float destroyDuration = 0.2f;
 [SerializeField] private float moveDuration = 0.2f;
 ```
-**Animation Safety:**
-- Stops previous animation before starting new one
-- Handles destroyed GameObject gracefully
+**Safety:**
+- Stops previous animation before starting new
+- Null-safe operations
 - Frame-perfect timing with `Time.deltaTime`
 
 ---
 
 ### ChipManagerBase
-Abstract base class for managing chip lifecycle and operations.
+Abstract base class for chip lifecycle management.
 
 **Responsibilities:**
-- Chip spawning with random or specific prefabs
+- Chip spawning (random or specific)
 - Chip destruction (individual or batch)
-- Chip queries by board position
-- Board integration via `BoardSystemBase`
+- Spatial queries by grid position
+- Board system integration
 - Null reference cleanup
 
 **Key Methods:**
-- `FillBoard()` - Abstract method to populate entire board
-- `SpawnRandomChipAt(tile)` - Spawns random chip from prefab pool
-- `SpawnChipAt(tile, prefab)` - Abstract method for specific chip spawning
+- `FillBoard()` - Abstract, populate entire board
+- `SpawnRandomChipAt(tile)` - Spawn from prefab pool
+- `SpawnChipAt(tile, prefab)` - Abstract, specific chip spawning
 - `DestroyChips(chips)` - Batch destruction with automatic cleanup
-- `FindChipAt(row, col)` - Query chip by grid coordinates (with duplicate detection)
-- `CleanupDestroyedChips()` - Abstract method for removing null references
+- `FindChipAt(row, col)` - Position-based query with duplicate detection
+- `CleanupDestroyedChips()` - Abstract, remove null references
 
 **Properties:**
-- `ActiveChips` - Read-only list of currently active chips
-- `BoardSystem` - Reference to board system for tile/occupant management
+- `ActiveChips` - Read-only list of active chips
+- `BoardSystem` - Board system reference
 
-**Design Notes:**
-- Performance-optimized: Avoids LINQ in `FindChipAt()` for frequent queries
-- Implements `IDisposable` for proper cleanup
-- Automatic null cleanup after batch destruction
-- Duplicate detection warns of chip count mismatches
+**Performance:**
+- Manual loop in `FindChipAt()` (avoids LINQ overhead)
+- Automatic null cleanup after batch operations
+- Duplicate detection for debugging
 
 ---
 
 ### BasicChip
-Concrete implementation of `ChipBase` with standard match-3 behavior.
+Concrete chip with standard match-3 behavior.
 
 **Features:**
-- **Type Matching**: Strict equality check (no wildcards)
-- **4-Directional Adjacency**: Horizontal and vertical only (no diagonals)
-- **Component-Driven**: All visuals handled by `ChipAnimatorComponent`
+- Strict type matching (no wildcards)
+- 4-directional adjacency (orthogonal only)
+- Component-driven visuals
 
 **Adjacency Rules:**
 ```
 
-Valid adjacent positions (O = current chip, X = adjacent):
+Valid (O = chip, X = adjacent):
 X
 X O X
 X
@@ -159,44 +156,41 @@ O
 X   X
 ```
 **Methods:**
-- `IsTypeMatch(type)` - Strict equality check
+- `IsTypeMatch(type)` - Returns `LinkType == type`
 - `IsAdjacent(other)` - 4-directional validation with null safety
 
 ---
 
 ### ChipManager
-Concrete implementation managing active chip collection.
+Concrete manager tracking active chips.
 
 **Features:**
-- Tracks all active chips in `_activeChips` list
-- Integrates with board system for tile occupancy
-- Handles GameObject instantiation and destruction
-- Automatic null cleanup after batch operations
-- Duplicate spawn detection
-
-**Key Operations:**
+- Active chip list management
+- Board system integration
+- GameObject lifecycle (Instantiate/Destroy)
+- Automatic null cleanup
+- Duplicate spawn prevention
 
 **Spawning:**
-- `FillBoard()` - Fills all empty tiles with random chips
-- `SpawnChipAt()` - Creates chip above board, animates falling down
-  - Spawn position: `(tile.x, tile.y + boardHeight, 0)`
-  - Prevents duplicate spawns on same tile
-  - Names chips as `Chip_{row}_{column}` for debugging
+- `FillBoard()` - Fills all empty tiles
+- `SpawnChipAt(tile, prefab)` - Spawns chip above board (row + boardHeight), animates falling
+- Prevents duplicate spawns on occupied tiles
+- Names chips `Chip_{row}_{column}` for debugging
 
 **Destruction:**
-- `DestroyChip()` - Removes single chip safely
-- `DestroyChips()` - Batch destruction + automatic null cleanup
-- `DestroyAllChips()` - Clears all chips (reverse iteration for safety)
-- `CleanupDestroyedChips()` - Removes null references from list
+- `DestroyChip(chip)` - Single chip removal
+- `DestroyChips(chips)` - Batch destruction + null cleanup
+- `DestroyAllChips()` - Clear all (reverse iteration)
+- `CleanupDestroyedChips()` - `RemoveAll()` for null references
 
 **Queries:**
-- `FindChipAt(row, col)` - Fast position-based lookup with duplicate detection
+- `FindChipAt(row, col)` - O(n) lookup with duplicate detection
 
-**Safety Features:**
-- Duplicate tile occupancy detection
-- Null reference cleanup via `RemoveAll()`
-- Debug logging for spawn/destroy operations
-- Warning if multiple chips found at same position
+**Safety:**
+- Duplicate tile occupancy check
+- Null cleanup via `RemoveAll()`
+- Debug logging for spawn/destroy
+- Multi-chip warning at same position
 
 ---
 
@@ -205,70 +199,48 @@ Concrete implementation managing active chip collection.
 ### Setup
 ```
 csharp
-// Create chip manager
-var chipPrefabs = new List<ChipBase> { redChipPrefab, blueChipPrefab, greenChipPrefab };
+var chipPrefabs = new List<ChipBase> { redChip, blueChip, greenChip };
 var chipManager = new ChipManager(boardSystem, chipPrefabs);
-
-// Fill board initially
 chipManager.FillBoard();
 ```
-### Spawning Chips
+### Spawning
 ```
 csharp
-// Spawn random chip at specific tile
+// Random chip at tile
 if (boardSystem.TryGetEmptyTile(out var tile))
-{
 chipManager.SpawnRandomChipAt(tile);
-}
 
-// Fill all empty tiles (handles animation automatically)
+// Fill all empty tiles
 chipManager.FillBoard();
 ```
-### Destroying Chips
+### Destruction
 ```
 csharp
-// Destroy matched chips (with automatic cleanup)
-var matchedChips = new List<ChipBase> { chip1, chip2, chip3 };
-chipManager.DestroyChips(matchedChips); // Cleanup happens automatically
+// Batch destroy (with auto-cleanup)
+chipManager.DestroyChips(matchedChips);
 
-// Destroy single chip
-var chipToRemove = chipManager.FindChipAt(2, 3);
-if (chipToRemove != null)
-{
-chipManager.DestroyChip(chipToRemove);
-}
-
-// Clean up all chips
-chipManager.Dispose(); // Or DestroyAllChips()
-```
-### Querying Chips
-```
-csharp
-// Find chip at grid position
-var chip = chipManager.FindChipAt(row: 3, col: 5);
-
+// Single chip
+var chip = chipManager.FindChipAt(2, 3);
 if (chip != null)
-{
-Debug.Log($"Found {chip.LinkType} chip at ({chip.Tile.Row}, {chip.Tile.Column})");
-}
+chipManager.DestroyChip(chip);
 
-// Check if position is empty
+// Clear all
+chipManager.Dispose();
+```
+### Queries
+```
+csharp
+var chip = chipManager.FindChipAt(row: 3, col: 5);
 bool isEmpty = chipManager.FindChipAt(2, 3) == null;
 ```
-### Integration with Refill System
+### Integration with Refill
 ```
 csharp
-// After link completion
-private void HandleLinkComplete(List<ILinkable> linkables)
+void HandleLinkComplete(List<ILinkable> linkables)
 {
-// Cast to ChipBase for processing
 var chips = linkables.Cast<ChipBase>().ToList();
-
-    // Destroy matched chips
-    chipManager.DestroyChips(chips); // Automatic cleanup included
-    
-    // BoardRefillSystem handles gravity and spawning
-    boardRefillSystem.StartRefill(chips);
+chipManager.DestroyChips(chips);
+boardRefillSystem.StartRefill(chips);
 }
 ```
 ---
@@ -276,83 +248,68 @@ var chips = linkables.Cast<ChipBase>().ToList();
 ## Important Notes
 
 ### Performance
-- **Query Optimization**: `FindChipAt()` uses manual loop instead of LINQ (performance-critical)
-- **Batch Operations**: `DestroyChips()` caches list to avoid enumeration issues
-- **Automatic Cleanup**: Null references removed via `RemoveAll()` after batch destruction
-- **Component-Based**: Animation logic separated from game logic for better performance
+- `FindChipAt()` uses manual loop (LINQ avoided)
+- Batch operations cache list to prevent enumeration issues
+- Null cleanup via `RemoveAll()` after batch destruction
+- Component-based animation separates concerns
 
 ### Unity Lifecycle
-- **Destruction Timing**: `Object.Destroy()` marks for destruction at end of frame
-- **Null References**: Unity nulls persist in lists until explicit cleanup
-- **Animation Coroutines**: Stopped automatically when chip is destroyed
-- **Spawn Animation**: Chips spawn above board and animate falling down
+- `Object.Destroy()` marks for destruction at end-of-frame
+- Unity nulls persist until explicit cleanup
+- Coroutines stop automatically on GameObject destruction
+- Chips spawn above board and animate falling
 
 ### Safety
-- **Duplicate Detection**: Warns if multiple chips found at same position
-- **Tile Validation**: Checks tile occupancy before spawning
-- **Null Safety**: All public methods check for null chips
-- **Cleanup Guarantee**: `CleanupDestroyedChips()` called after batch operations
+- Duplicate position detection
+- Tile occupancy validation before spawn
+- Null-safe public methods
+- Guaranteed cleanup after batch operations
 
 ### Board Integration
-- Always uses `Occupy()`/`Release()` and `AddOccupant()`/`RemoveOccupant()` pattern
-- Maintains sync between ChipManager list and BoardSystem occupants
+- Uses `Occupy()`/`Release()` + `AddOccupant()`/`RemoveOccupant()` pattern
+- Maintains sync between ChipManager list and BoardSystem
 - Validates tile references before operations
 
 ---
 
 ## Design Patterns
 
-- **Template Method**: `ChipManagerBase` defines structure, derived classes implement specifics
+- **Template Method**: Base classes define structure, derived implement specifics
 - **Strategy Pattern**: Different chip types via `ChipBase` inheritance
-- **Component Pattern**: `ChipAnimatorComponentBase` for swappable animation systems
-- **Repository Pattern**: ChipManager acts as repository for chip entities
-- **Object Pool**: Can be implemented via custom manager (see example above)
-- **Dispose Pattern**: Implements `IDisposable` for cleanup
+- **Component Pattern**: Swappable `ChipAnimatorComponentBase` implementations
+- **Repository Pattern**: ChipManager as repository for chip entities
+- **Dispose Pattern**: `IDisposable` for cleanup
 
 ---
 
-## Debugging Support
+## Common Issues
 
-### Built-in Logging
-- Spawn operations log position and total count
-- Destroy operations log before/after counts
-- Duplicate detection logs position conflicts
-- Null cleanup logs removed count
-
-## Common Issues & Solutions
-
-### Issue: Chip count grows over time
-**Cause**: Chips not removed from list after destruction  
-**Solution**: `CleanupDestroyedChips()` now called automatically in `DestroyChips()`
-
-### Issue: "Chip already has a tile" error
-**Cause**: Duplicate spawn on occupied tile  
-**Solution**: `SpawnChipAt()` now checks for existing chip before spawning
-
-### Issue: Multiple chips at same position
-**Cause**: Synchronization issue between list and board  
-**Solution**: `FindChipAt()` detects and logs duplicate positions
-
-### Issue: Animation doesn't stop when chip destroyed
-**Cause**: Coroutine continues after GameObject destroyed  
-**Solution**: `ChipAnimatorComponent` checks for null before animation operations
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| Chip count grows | Not removed from list | `CleanupDestroyedChips()` auto-called |
+| "Chip already has tile" | Duplicate spawn | `SpawnChipAt()` checks existing chip |
+| Multiple chips at position | Sync issue | `FindChipAt()` detects & logs duplicates |
+| Animation doesn't stop | Coroutine continues | Animator checks null before operations |
 
 ---
 
-## Extensibility
+## Debugging
 
-Extend the system by:
-1. **Custom Chips**: Inherit from `ChipBase` for unique behaviors (power-ups, obstacles, wildcards)
-2. **Custom Animators**: Inherit from `ChipAnimatorComponentBase` for different animation systems (DOTween, Animator, Physics)
-3. **Custom Managers**: Inherit from `ChipManagerBase` for pooling, spawning strategies, or special rules
-4. **Adjacency Rules**: Override `IsAdjacent()` in chip classes for custom spatial logic (8-directional, range-based)
-5. **Type Matching**: Override `IsTypeMatch()` for wildcards, combos, or special interactions
+Built-in logging:
+- Spawn: Position & total count
+- Destroy: Before/after counts
+- Duplicate: Position conflicts
+- Cleanup: Null count removed
 
-## Key Updates:
-1. ✅ **Component-based architecture** - ChipAnimatorComponent separation
-2. ✅ **Spawn animation** - Chips fall from above
-3. ✅ **Automatic null cleanup** - CleanupDestroyedChips() pattern
-4. ✅ **Duplicate detection** - FindChipAt() warns of conflicts
-5. ✅ **Debugging support** - Logging and context menu examples
-6. ✅ **Common issues section** - Solutions to bugs we fixed
-7. ✅ **Updated examples** - Reflect ChipBase instead of LinkableBase
+Disable logs by removing `Debug.Log()` calls in production builds.
+
+---
+
+## Key Changes:
+1. ✅ **Shortened by ~40%** - Removed redundant sections
+2. ✅ **Table format** for common issues - Easier to scan
+3. ✅ **Removed "Key Updates"** section - Not relevant for maintainers
+4. ✅ **Consolidated extensibility** - Brief, focused examples
+5. ✅ **Cleaner structure** - Matches board/link README format
+6. ✅ **Quick reference** - Important notes as bullet points
+7. ✅ **Removed verbose explanations** - Kept only essential info
