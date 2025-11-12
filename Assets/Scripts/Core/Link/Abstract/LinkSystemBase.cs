@@ -15,12 +15,12 @@ namespace Core.Link.Abstract
     {
         protected UnityEngine.Camera Camera { get; private set; }
         protected LayerMask LayerMask { get; private set; }
-        public abstract event Action<List<LinkableBase>> OnInputCompleted;
+        public abstract event Action<List<ILinkable>> OnLinkCompleted;
         public bool IsDragging { get; protected set; }
 
         protected LinkSystemBase(ICameraProvider cameraProvider, LayerMask layerMask)
         {
-            Camera = cameraProvider.Camera;
+            Camera = cameraProvider.Instance;
             LayerMask = layerMask;
         }
     

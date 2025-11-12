@@ -1,23 +1,23 @@
-using Core.Board.Abstract;
-using Core.Board.Interface;
+using Core.Board.Tile.Interface;
+using Core.Link.Interface;
 using Core.Link.Type;
 using UnityEngine;
 
-namespace Core.Link.Interface
+namespace Core.Link.Abstract
 {
     /// <summary>
     /// Represents a base class for objects that can be linked and interact with tiles on a game board.
     /// </summary>
-    public abstract class LinkableBase : MonoBehaviour, ITileOccupant
+    public abstract class LinkableBase : MonoBehaviour, ILinkable
     {
         [Header("Linking")]
         [SerializeField] private LinkType linkType;
         public LinkType LinkType => linkType;
-        public TileBase Tile { get; private set; }
+        public ITile Tile { get; private set; }
 
         private bool _isLinked;
 
-        public void Occupy(TileBase tile)
+        public void Occupy(ITile tile)
         {
             if (Tile != null)
             {
@@ -26,15 +26,26 @@ namespace Core.Link.Interface
             }
         
             Tile = tile;
-            Move(tile.Position);
+            
+            OnOccupied(tile);
+        }
+
+        protected virtual void OnOccupied(ITile tile)
+        {
+            Debug.Log($"{name} occupied the tile {tile.Name}");
         }
         
         public void Release()
         {
+            PreRelease(Tile);
             Tile = null;
         }
 
-        protected abstract void Move(Vector3 position);
+        protected virtual void PreRelease(ITile tile)
+        {
+            var tileName = tile == null ? "null" : tile.Name;
+            Debug.Log($"{name} released the tile {tileName}");
+        }
         
         public void Link()
         {
@@ -44,12 +55,10 @@ namespace Core.Link.Interface
             }
 
             _isLinked = true;
-            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
             Tile?.Highlight();
             
             OnLinked();
             
-            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
             Debug.Log($"Linked chip {name} at [{Tile?.Row:00}, {Tile?.Column:00}]");
         }
 
@@ -63,17 +72,15 @@ namespace Core.Link.Interface
             }
             
             _isLinked = false;
-            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
             Tile?.Conceal();
             
             OnUnlinked();
             
-            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
             Debug.Log($"Unlinked chip {name} at [{Tile?.Row:00}, {Tile?.Column:00}]");
         }
         
         protected abstract void OnUnlinked();
         public abstract bool IsTypeMatch(LinkType type);
-        public abstract bool IsAdjacent(LinkableBase other);
+        public abstract bool IsAdjacent(ILinkable other);
     }
 }

@@ -9,13 +9,9 @@ namespace Core.Link.Type
     /// </remarks>
     public enum LinkType
     {
-        // ReSharper disable once UnusedMember.Global
         Red,
-        // ReSharper disable once UnusedMember.Global
         Green,
-        // ReSharper disable once UnusedMember.Global
         Blue,
-        // ReSharper disable once UnusedMember.Global
         Yellow
     }
 }

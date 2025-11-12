@@ -14,16 +14,16 @@ namespace Core.Link
     /// </summary>
     public class LinkSystem : LinkSystemBase
     {
-        private event Action<List<LinkableBase>> onLinkCompleted;
+        private event Action<List<ILinkable>> onLinkCompleted;
 
-        public override event Action<List<LinkableBase>> OnInputCompleted
+        public override event Action<List<ILinkable>> OnLinkCompleted
         {
             add => onLinkCompleted += value;
             remove => onLinkCompleted -= value;
         }
 
-        private readonly List<LinkableBase> _linkables = new();
-        private LinkableBase _lastLinkableBase;
+        private readonly List<ILinkable> _linkables = new();
+        private ILinkable _lastLinkable;
         private LinkType _linkType;
 
         public LinkSystem(ICameraProvider cameraProvider, LayerMask layerMask) : base(cameraProvider, layerMask)
@@ -38,33 +38,29 @@ namespace Core.Link
 
         public override void StartDrag()
         {
-            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
             var linkable = GetLinkableAtInputPosition();
 
-            if (!linkable)
+            if (linkable == null)
             {
-                // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
                 Debug.LogWarning("No linkable found, won't start drag");
                 return;
             }
 
             _linkType = linkable.LinkType;
             IsDragging = true;
-            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
             AddLinkable(linkable);
         }
 
         public override void UpdateDrag()
         {
-            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
             var linkable = GetLinkableAtInputPosition();
-            if (!linkable)
+            if (linkable == null)
             {
                 // assume player will find a linkable
                 return;
             }
 
-            if (linkable == _lastLinkableBase)
+            if (linkable == _lastLinkable)
             {
                 // still waiting, ignore
                 return;
@@ -74,7 +70,6 @@ namespace Core.Link
             var linkedCount = _linkables.Count;
             if (linkedCount >= 2 && linkable == _linkables[linkedCount - 2])
             {
-                // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
                 RemoveLastLinkable();
                 return;
             }
@@ -82,7 +77,6 @@ namespace Core.Link
             // check if linkable is already linked
             if (_linkables.Contains(linkable))
             {
-                // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
                 Debug.LogWarning("Linkable already linked");
                 return;
             }
@@ -90,16 +84,13 @@ namespace Core.Link
             // check if linkable is type match
             if (!linkable.IsTypeMatch(_linkType))
             {
-                // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
                 Debug.LogWarning("Linkable type mismatch");
                 return;
             }
 
             // check if linkable is adjacent to last linkable
-            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
             if (IsLinkable(linkable))
             {
-                // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
                 AddLinkable(linkable);
             }
         }
@@ -114,19 +105,16 @@ namespace Core.Link
                 onLinkCompleted?.Invoke(_linkables);
             }
 
-            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
             ClearLinkables();
         }
 
-        private void AddLinkable(LinkableBase linkableBase)
+        private void AddLinkable(ILinkable linkable)
         {
-            _linkables.Add(linkableBase);
-            _lastLinkableBase = linkableBase;
-            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
-            linkableBase.Link();
+            _linkables.Add(linkable);
+            _lastLinkable = linkable;
+            linkable.Link();
 
-            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
-            Debug.Log($"Added linkable {linkableBase.GetType().Name}");
+            Debug.Log($"Added linkable {linkable.GetType().Name}");
         }
 
         private void RemoveLastLinkable()
@@ -134,19 +122,16 @@ namespace Core.Link
             var linkedCount = _linkables.Count;
             if (linkedCount == 0)
             {
-                // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
                 Debug.LogWarning("No linkables to remove");
                 return;
             }
 
             var lastLinkable = _linkables[linkedCount - 1];
             _linkables.RemoveAt(linkedCount - 1);
-            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
             lastLinkable.Unlink();
 
-            _lastLinkableBase = _linkables.Count > 0 ? _linkables[^1] : null;
+            _lastLinkable = _linkables.Count > 0 ? _linkables[^1] : null;
 
-            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
             Debug.Log($"Removed linkable {lastLinkable.GetType().Name}");
         }
 
@@ -154,46 +139,36 @@ namespace Core.Link
         {
             foreach (var linkable in _linkables)
             {
-                // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
                 linkable.Unlink();
             }
 
             _linkables.Clear();
-            _lastLinkableBase = null;
+            _lastLinkable = null;
         }
 
-        private LinkableBase GetLinkableAtInputPosition()
+        private ILinkable GetLinkableAtInputPosition()
         {
             var position = Camera.ScreenToWorldPoint(Input.mousePosition);
             var hit2D = Physics2D.Raycast(position, Vector2.zero, Mathf.Infinity, LayerMask);
 
-            if (hit2D.collider)
-            {
-                // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
-                return hit2D.collider.GetComponent<LinkableBase>();
-            }
-
-            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
-            Debug.LogWarning("No hit");
-            return null;
+            return hit2D.collider 
+                ? hit2D.collider.GetComponent<ILinkable>() 
+                : null;
         }
 
-        private bool IsLinkable(LinkableBase linkableBase)
+        private bool IsLinkable(ILinkable linkable)
         {
-            if (!linkableBase)
+            if (linkable == null)
             {
-                // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
                 Debug.LogWarning("Linkable cannot be null");
                 return false;
             }
 
-            if (_lastLinkableBase)
+            if (_lastLinkable != null)
             {
-                // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
-                return _lastLinkableBase.IsAdjacent(linkableBase);
+                return _lastLinkable.IsAdjacent(linkable);
             }
 
-            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
             Debug.LogWarning("No last linkable");
             return false;
         }
