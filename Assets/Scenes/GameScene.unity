@@ -272,9 +272,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   gameCameraProvider: {fileID: 291563692}
-  rowCount: 8
-  columnCount: 8
-  tilePrefab: {fileID: 6785040750516963991, guid: 96cf378c278da4ffba4d461ca63f0724, type: 3}
+  rowCount: 4
+  columnCount: 4
+  boardTilePrefab: {fileID: 6785040750516963991, guid: 96cf378c278da4ffba4d461ca63f0724, type: 3}
   chipPrefabs:
   - {fileID: 6547929312675276484, guid: 730ba60145a1e4856bb1b51ab83edf50, type: 3}
   - {fileID: 6547929312675276484, guid: 8d6882920cc294ac991826495599bbca, type: 3}
@@ -284,6 +284,7 @@ MonoBehaviour:
   linkLayerMask:
     serializedVersion: 2
     m_Bits: 64
+  shuffleCountBeforeFailure: 2
 --- !u!1 &1177839870
 GameObject:
   m_ObjectHideFlags: 0

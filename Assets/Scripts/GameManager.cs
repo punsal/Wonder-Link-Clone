@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Core.Board;
 using Core.Board.Abstract;
+using Core.Board.Tile.Abstract;
 using Core.Camera;
 using Core.Camera.Abstract;
 using Core.Camera.Provider;
@@ -9,76 +10,101 @@ using Core.Camera.Provider.Abstract;
 using Core.Link;
 using Core.Link.Abstract;
 using Core.Link.Interface;
+using Core.Runner.Interface;
+using Gameplay.Chip;
+using Gameplay.Chip.Abstract;
+using Gameplay.Input;
+using Gameplay.Input.Abstract;
+using Gameplay.Systems.BoardRefill;
+using Gameplay.Systems.BoardRefill.Abstract;
+using Gameplay.Systems.MatchDetection;
+using Gameplay.Systems.MatchDetection.Abstract;
+using Gameplay.Systems.Shuffle;
+using Gameplay.Systems.Shuffle.Abstract;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
-public class GameManager : MonoBehaviour
+public class GameManager : MonoBehaviour, ICoroutineRunner
 {
     [Header("Camera")]
     [SerializeField] private UnityCameraProviderBase gameCameraProvider;
     
     [Header("Board")]
-    [SerializeField, Range(4, 12)] private int rowCount;
-    [SerializeField, Range(4, 12)] private int columnCount;
-    [SerializeField] private Tile tilePrefab;
+    [SerializeField, Range(4, 12)] private int rowCount = 8;
+    [SerializeField, Range(4, 12)] private int columnCount = 8;
+    [SerializeField] private TileBase boardTilePrefab;
     
     [Header("Chip")]
-    [SerializeField] private LinkableBase[] chipPrefabs;
+    [SerializeField] private List<ChipBase> chipPrefabs;
     
     [Header("Linking")]
     [SerializeField] private UnityCameraProviderBase linkCameraProvider;
     [SerializeField] private LayerMask linkLayerMask;
+    
+    [Header("System Configuration")]
+    [SerializeField, Range(1, 5)] private int shuffleCountBeforeFailure = 2;
 
     private CameraSystemBase _cameraSystem;
     private BoardSystemBase _boardSystem;
     private LinkSystemBase _linkSystem;
-    private List<LinkableBase> _chips;
+    private ChipManagerBase _chipManager;
+    private BoardRefillSystemBase _boardRefillSystem;
+    private MatchDetectionSystemBase _matchDetectionSystem;
+    private ShuffleSystemBase _shuffleSystem;
+    private InputHandlerBase _inputHandler;
+    
+    private int _currentShuffleCount;
     
     private void Awake()
     {
         CreateGameCameraSystem();
         CreateBoardSystem();
         CreateLinkSystem();
-        _chips = new List<LinkableBase>();
+        CreateChipManager();
+        CreateBoardRefillSystem();
+        CreateMatchDetectionSystem();
+        CreateShuffleSystem();
+        CreateInputHandler();
+        
+        _currentShuffleCount = 0;
     }
     
     private void OnEnable()
     {
         _boardSystem.Initialize();
         
-        _linkSystem.OnInputCompleted += HandleLinkComplete;
+        _linkSystem.OnLinkCompleted += HandleLinkCompleted;
+        _boardRefillSystem.OnRefillCompleted += HandleRefillCompleted;
+        _shuffleSystem.OnShuffleCompleted += HandleShuffleCompleted;
     }
 
     private void Start()
     {
-        CreateChips();
+        _chipManager.FillBoard();
         _cameraSystem.CenterOnBoard(rowCount, columnCount);
+        _inputHandler.Enable();
+
+        if (!ShouldShuffle())
+        {
+            Debug.Log("Board has moves, no need to shuffle");
+            return;
+        }
+        
+        Debug.Log("Starting shuffle");
+        _shuffleSystem.StartShuffle();
     }
 
     private void Update()
     {
-        if (Input.GetMouseButtonDown(0))
-        {
-            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
-            _linkSystem.StartDrag();
-        }
-        else if (Input.GetMouseButton(0) && _linkSystem.IsDragging)
-        {
-            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
-            _linkSystem.UpdateDrag();
-        }
-        else if (Input.GetMouseButtonUp(0) && _linkSystem.IsDragging)
-        {
-            // ReSharper disable once Unity.PerformanceCriticalCodeInvocation
-            _linkSystem.EndDrag();
-        }
+        _inputHandler?.Update();
     }
 
     private void OnDisable()
     {
-        _linkSystem.OnInputCompleted -= HandleLinkComplete;
+        _linkSystem.OnLinkCompleted -= HandleLinkCompleted;
+        _boardRefillSystem.OnRefillCompleted -= HandleRefillCompleted;
+        _shuffleSystem.OnShuffleCompleted -= HandleShuffleCompleted;
         
-        DestroyChips();
+        _chipManager.Dispose();
         _boardSystem.Dispose();
     }
 
@@ -106,11 +132,11 @@ public class GameManager : MonoBehaviour
 
     private void CreateBoardSystem()
     {
-        if (tilePrefab == null)
+        if (boardTilePrefab == null)
         {
             Debug.LogError("Tile prefab is null");
         }
-        _boardSystem = new BoardSystem(rowCount, columnCount, tilePrefab);
+        _boardSystem = new BoardSystem(rowCount, columnCount, boardTilePrefab);
     }
 
     private void CreateLinkSystem()
@@ -129,69 +155,139 @@ public class GameManager : MonoBehaviour
                 _linkSystem = new LinkSystem(new FallbackCameraProvider(Camera.main), linkLayerMask);
             }
         }
-        _linkSystem = new LinkSystem(linkCameraProvider, linkLayerMask);
-    }
-
-    private void CreateChips()
-    {
-        var chipPrefabsCount = chipPrefabs.Length;
-        var boardSize = rowCount * columnCount;
-        for (var i = 0; i < boardSize; i++)
+        else
         {
-            if (!_boardSystem.TryGetEmptyTile(out var emptyTile))
-            {
-                Debug.LogWarning("No empty tiles");
-                break;
-            }
-            var randomIndex = Random.Range(0, chipPrefabsCount);
-            var chipPrefab = chipPrefabs[randomIndex];
-            var chip = Instantiate(chipPrefab, Vector3.zero, Quaternion.identity);
-            chip.Occupy(emptyTile);
-            _boardSystem.AddOccupant(chip);
-            _chips.Add(chip);
+            _linkSystem = new LinkSystem(linkCameraProvider, linkLayerMask);
         }
     }
 
-    private void HandleLinkComplete(List<LinkableBase> linkables)
+    private void CreateChipManager()
     {
-        Debug.Log($"Link complete: {linkables.Count}");
+        if (chipPrefabs == null || chipPrefabs.Count == 0)
+        {
+            Debug.LogError("No chip prefabs found");
+        }
+        _chipManager = new ChipManager(_boardSystem, chipPrefabs);
+    }
+
+    private void CreateBoardRefillSystem()
+    {
+        _boardRefillSystem = new BoardRefillSystem(_boardSystem, _chipManager, this);
+    }
+
+    private void CreateMatchDetectionSystem()
+    {
+        _matchDetectionSystem = new MatchDetectionSystem(_boardSystem, _chipManager);
+    }
+
+    private void CreateShuffleSystem()
+    {
+        _shuffleSystem = new ShuffleSystem(_boardSystem, _chipManager, this);
+    }
+
+    private void CreateInputHandler()
+    {
+#if UNITY_EDITOR
+        _inputHandler = new MouseInputHandler(_linkSystem);
+        Debug.Log("Using MouseInputHandler in Unity Editor");
+#elif UNITY_ANDROID || UNITY_IOS
+        _inputHandler = new TouchInputHandler(_linkSystem);
+        Debug.Log("Using TouchInputHandler for mobile platform");
+#else
+        _inputHandler = new MouseInputHandler(_linkSystem);
+        Debug.Log("Using MouseInputHandler for other platforms");
+#endif
+    }
+
+    private void HandleLinkCompleted(List<ILinkable> linkables)
+    {
+        Debug.Log($"Link complete: {linkables.Count} chips matched");
         
-        // TODO: Implement chip destruction and scoring logic
-        // For now, just log the positions
-        foreach (var linkable in linkables)
-        {
-            Debug.Log($"Matched chip at ({linkable.Tile.Row}, {linkable.Tile.Column})");
-        }
+        // Disable input during refill sequence
+        _inputHandler.Disable();
+        
+        // copy linkables to a new list of chips to process
+        var chips = linkables.Cast<ChipBase>().ToList();
+
+        // Start destruction and refill sequence
+        _boardRefillSystem.StartRefill(chips);
     }
 
-    private void DestroyChips()
+    private void HandleRefillCompleted()
     {
-        if (_chips == null)
+        if (ShouldShuffle())
         {
-            Debug.LogWarning("Chips list is null");
+            Debug.Log("No possible moves detected");
+            _shuffleSystem.StartShuffle();
             return;
         }
         
-        var chipsToDestroy = _chips.Where(chip => chip != null).ToList();
-        
-        if (chipsToDestroy.Count == 0)
-        {
-            Debug.LogWarning("No chips to destroy");
-            return;
-        }
+        Debug.Log("Refill complete");
+        _inputHandler.Enable();
+    }
 
-        for (var i = chipsToDestroy.Count - 1; i >= 0; i--)
+    private bool ShouldShuffle()
+    {
+        if (_matchDetectionSystem.HasPossibleMoves())
         {
-            var chip = chipsToDestroy[i];
-            if (chip == null)
+            return false;
+        }
+        _currentShuffleCount = 0;
+        return true;
+    }
+
+    private void HandleShuffleCompleted()
+    {
+        _currentShuffleCount++;
+        Debug.Log($"Current shuffle count: {_currentShuffleCount}");
+        
+        if (!_matchDetectionSystem.HasPossibleMoves())
+        {
+            if (_currentShuffleCount < shuffleCountBeforeFailure)
             {
-                Debug.LogWarning($"Chip is null at {i}");
-                continue;
+                Debug.Log("No possible moves detected, shuffle failed. Trying again.");
+                _shuffleSystem.StartShuffle();
+                return;
             }
             
-            chip.Release();
-            _boardSystem.RemoveOccupant(chip);
-            Destroy(chip.gameObject);
+            Debug.Log("No possible moves detected, shuffle failed. No more attempts.");
+            return;
+        }
+        
+        Debug.Log("Shuffle succeed.");
+        _inputHandler.Enable();
+    }
+    
+    [ContextMenu("Debug Chip Count")]
+    private void DebugChipCount()
+    {
+        var activeChips = _chipManager.ActiveChips;
+        var nonNullChips = activeChips.Where(c => c != null).ToList();
+        var withTiles = nonNullChips.Where(c => c.Tile != null).ToList();
+    
+        Debug.Log($"=== CHIP COUNT DEBUG ===");
+        Debug.Log($"Total in list: {activeChips.Count}");
+        Debug.Log($"Non-null: {nonNullChips.Count}");
+        Debug.Log($"With tiles: {withTiles.Count}");
+        Debug.Log($"Expected: {rowCount * columnCount}");
+    
+        // Check for duplicates
+        var duplicates = withTiles
+            .GroupBy(c => (c.Tile.Row, c.Tile.Column))
+            .Where(g => g.Count() > 1)
+            .ToList();
+    
+        if (duplicates.Any())
+        {
+            Debug.LogError($"Found {duplicates.Count} duplicate positions:");
+            foreach (var dup in duplicates)
+            {
+                Debug.LogError($"  Position ({dup.Key.Row}, {dup.Key.Column}): {dup.Count()} chips - {string.Join(", ", dup.Select(c => c.name))}");
+            }
+        }
+        else
+        {
+            Debug.Log("No duplicates found!");
         }
     }
 }
