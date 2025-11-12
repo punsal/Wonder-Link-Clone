@@ -1,23 +1,16 @@
-using System;
+using Core.Board.Tile.Interface;
 using UnityEngine;
 
-namespace Core.Board.Abstract
+namespace Core.Board.Tile.Abstract
 {
-    /// <summary>
-    /// Represents the base behavior and properties of a tile within a board system.
-    /// </summary>
-    /// <remarks>
-    /// This abstract class serves as a foundation for building various tile types.
-    /// It includes properties for tile position and methods to manage tile state.
-    /// Implementers of this class are required to define behavior for highlighting and concealing the tile.
-    /// </remarks>
-    public abstract class TileBase : MonoBehaviour, IDisposable
+    public abstract class TileBase : MonoBehaviour, ITile
     {
+        public string Name => _isDestroyed ? string.Empty : name;
         public int Row { get; private set; }
         public int Column { get; private set; }
 
         private bool _isDestroyed;
-        public Vector3 Position => transform.position;
+        public abstract Vector3 Position { get; }
 
         private void Awake()
         {
@@ -38,7 +31,7 @@ namespace Core.Board.Abstract
             Column = column;
         }
 
-        public void Dispose()
+        public void Destroy()
         {
             if (!_isDestroyed)
             {

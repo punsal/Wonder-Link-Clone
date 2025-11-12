@@ -1,4 +1,6 @@
 using Core.Board.Abstract;
+using Core.Board.Tile.Abstract;
+using Core.Board.Tile.Interface;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -10,9 +12,9 @@ namespace Core.Board
     /// </summary>
     public class BoardSystem : BoardSystemBase
     {
-        private readonly Tile _tilePrefab;
+        private readonly TileBase _tilePrefab;
 
-        public BoardSystem(int rowCount, int columnCount, Tile tilePrefab) : base(rowCount, columnCount)
+        public BoardSystem(int rowCount, int columnCount, TileBase tilePrefab) : base(rowCount, columnCount)
         {
             _tilePrefab = tilePrefab;
         }
@@ -29,7 +31,7 @@ namespace Core.Board
             {
                 for (var j = 0; j < ColumnCount; j++)
                 {
-                    var tile = Object.Instantiate(_tilePrefab, new Vector3(j, -i, 0), Quaternion.identity);
+                    ITile tile = Object.Instantiate(_tilePrefab, new Vector3(j, -i, 0), Quaternion.identity);
                     tile.Initialize(i, j);
                     Tiles[i, j] = tile;
                 }
@@ -47,7 +49,7 @@ namespace Core.Board
                     {
                         continue;
                     }
-                    tile.Dispose();
+                    tile.Destroy();
                 }
             }
         }

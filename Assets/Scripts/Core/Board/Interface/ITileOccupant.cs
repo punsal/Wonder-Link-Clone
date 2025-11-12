@@ -1,4 +1,4 @@
-using Core.Board.Abstract;
+using Core.Board.Tile.Interface;
 
 namespace Core.Board.Interface
 {
@@ -7,10 +7,8 @@ namespace Core.Board.Interface
     /// </summary>
     public interface ITileOccupant
     {
-        TileBase Tile { get; }
-        // ReSharper disable once UnusedMemberInSuper.Global
-        void Occupy(TileBase tile);
-        // ReSharper disable once UnusedMemberInSuper.Global
+        ITile Tile { get; }
+        void Occupy(ITile tile);
         void Release();
     }
 }

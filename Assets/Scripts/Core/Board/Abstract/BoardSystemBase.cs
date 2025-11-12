@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Core.Board.Interface;
+using Core.Board.Tile.Interface;
 using UnityEngine;
 
 namespace Core.Board.Abstract
@@ -12,28 +13,39 @@ namespace Core.Board.Abstract
     /// </summary>
     public abstract class BoardSystemBase : IDisposable
     {
-        protected int RowCount { get; }
-        protected int ColumnCount { get; }
-        protected TileBase[,] Tiles { get; }
+        public int RowCount { get; }
+        public int ColumnCount { get; }
+        protected ITile[,] Tiles { get; }
         private readonly List<ITileOccupant> _occupants;
 
         protected BoardSystemBase(int rowCount, int columnCount)
         {
             RowCount = rowCount;
             ColumnCount = columnCount;
-            Tiles = new TileBase[rowCount, columnCount];
+            Tiles = new ITile[rowCount, columnCount];
             _occupants = new List<ITileOccupant>();
         }
 
         public abstract void Initialize();
         public abstract void Dispose();
 
-        public bool TryGetEmptyTile(out TileBase tile)
+        public ITile GetTileAt(int row, int column)
+        {
+            if (row >= 0 && row < RowCount && column >= 0 && column < ColumnCount)
+            {
+                return Tiles[row, column];
+            }
+            
+            Debug.LogWarning($"Tile position ({row}, {column}) is out of bounds");
+            return null;
+        }
+        
+        public bool TryGetEmptyTile(out ITile tile)
         {
             tile = null;
     
             // Use HashSet for O(1) lookup instead of O(n) Contains
-            var occupiedTiles = new HashSet<TileBase>(
+            var occupiedTiles = new HashSet<ITile>(
                 _occupants
                     .Select(occupant => occupant.Tile)
                     .Where(t => t != null)
@@ -87,8 +99,8 @@ namespace Core.Board.Abstract
             _occupants.Add(occupant);
         }
         
-        // Defensive check to assure that the tile is in the board
-        private bool IsTileInBoard(TileBase tile)
+        // Defensive check to ensure that the tile is in the board
+        private bool IsTileInBoard(ITile tile)
         {
             if (tile.Row < 0 || tile.Row >= RowCount || tile.Column < 0 || tile.Column >= ColumnCount)
                 return false;
