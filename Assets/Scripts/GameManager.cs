@@ -19,6 +19,9 @@ using Gameplay.Systems.BoardRefill;
 using Gameplay.Systems.BoardRefill.Abstract;
 using Gameplay.Systems.MatchDetection;
 using Gameplay.Systems.MatchDetection.Abstract;
+using Gameplay.Systems.Score;
+using Gameplay.Systems.Score.Abstract;
+using Gameplay.Systems.Score.Observable;
 using Gameplay.Systems.Shuffle;
 using Gameplay.Systems.Shuffle.Abstract;
 using UnityEngine;
@@ -40,8 +43,13 @@ public class GameManager : MonoBehaviour, ICoroutineRunner
     [SerializeField] private UnityCameraProviderBase linkCameraProvider;
     [SerializeField] private LayerMask linkLayerMask;
     
+    [Header("Gameplay")]
+    [SerializeField] private int maxLevelScore = 100;
+    
     [Header("System Configuration")]
     [SerializeField, Range(1, 5)] private int shuffleCountBeforeFailure = 2;
+    [SerializeField] private GameScore levelScore;
+    [SerializeField] private GameScore playerScore;
 
     private CameraSystemBase _cameraSystem;
     private BoardSystemBase _boardSystem;
@@ -50,6 +58,7 @@ public class GameManager : MonoBehaviour, ICoroutineRunner
     private BoardRefillSystemBase _boardRefillSystem;
     private MatchDetectionSystemBase _matchDetectionSystem;
     private ShuffleSystemBase _shuffleSystem;
+    private ScoreSystemBase _scoreSystem;
     private InputHandlerBase _inputHandler;
     
     private int _currentShuffleCount;
@@ -63,6 +72,7 @@ public class GameManager : MonoBehaviour, ICoroutineRunner
         CreateBoardRefillSystem();
         CreateMatchDetectionSystem();
         CreateShuffleSystem();
+        CreateScoreSystem();
         CreateInputHandler();
         
         _currentShuffleCount = 0;
@@ -185,6 +195,27 @@ public class GameManager : MonoBehaviour, ICoroutineRunner
         _shuffleSystem = new ShuffleSystem(_boardSystem, _chipManager, this);
     }
 
+    private void CreateScoreSystem()
+    {
+        if (!levelScore)
+        {
+            Debug.LogError("Level score is null, creating default");
+            levelScore = ScriptableObject.CreateInstance<GameScore>();
+        }
+        
+        levelScore.SetValue(maxLevelScore);
+
+        if (!playerScore)
+        {
+            Debug.LogError("Player score is null, creating default");
+            playerScore = ScriptableObject.CreateInstance<GameScore>();
+        }
+        
+        playerScore.SetValue(0);
+        
+        _scoreSystem = new ScoreSystem(levelScore, playerScore);
+    }
+
     private void CreateInputHandler()
     {
 #if UNITY_EDITOR
@@ -209,12 +240,25 @@ public class GameManager : MonoBehaviour, ICoroutineRunner
         // copy linkables to a new list of chips to process
         var chips = linkables.Cast<ChipBase>().ToList();
 
+        // update score
+        foreach (var chip in chips)
+        {
+            _scoreSystem.AddScore(chip.Score);
+        }
+        
         // Start destruction and refill sequence
         _boardRefillSystem.StartRefill(chips);
     }
 
     private void HandleRefillCompleted()
     {
+        // check if the score is fulfilled
+        if (_scoreSystem.IsScoreReached)
+        {
+            Debug.Log("Level completed!");
+            return;
+        }
+        
         if (ShouldShuffle())
         {
             Debug.Log("No possible moves detected");

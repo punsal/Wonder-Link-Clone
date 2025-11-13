@@ -285,6 +285,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 64
   shuffleCountBeforeFailure: 2
+  levelScore: {fileID: 11400000, guid: 6216dd1577d7b4ded9ba85b78ff68cdd, type: 2}
+  playerScore: {fileID: 11400000, guid: 785524bcbb81b4407b07328c691fc1ca, type: 2}
 --- !u!1 &1177839870
 GameObject:
   m_ObjectHideFlags: 0
