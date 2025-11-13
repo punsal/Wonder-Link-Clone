@@ -12,7 +12,7 @@ PlayerSettings:
   targetDevice: 2
   useOnDemandResources: 0
   accelerometerFrequency: 60
-  companyName: "Mustafa Pamir \xDCnsal "
+  companyName: Mustafa Pamir Unsal
   productName: Wonder Link Clone
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
