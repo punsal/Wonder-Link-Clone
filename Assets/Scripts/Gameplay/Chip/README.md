@@ -1,6 +1,6 @@
 # Chip System
 
-Manages chip lifecycle, spawning, destruction, and spatial queries for board-based match-3 gameplay. Uses component-based architecture for flexible visual effects and centralized chip management.
+Manages chip lifecycle, spawning, destruction, and spatial queries for board-based match-3 gameplay. Uses component-based architecture for flexible visual effects and score integration.
 
 ## Structure
 
@@ -10,7 +10,9 @@ Manages chip lifecycle, spawning, destruction, and spatial queries for board-bas
 - **Components/** - Animation and behavior components
   - **Abstract/**
     - **ChipAnimatorComponentBase.cs** - Abstract animator component
+    - **ChipScoreComponentBase.cs** - Abstract score component
   - **ChipAnimatorComponent.cs** - Concrete tween-based animator
+  - **ChipScoreComponent.cs** - Concrete score provider
 - **BasicChip.cs** - Concrete chip with standard match-3 behavior
 - **ChipManager.cs** - Concrete chip manager implementation
 
@@ -21,25 +23,30 @@ ILinkable (Core.Link)
 └── LinkableBase (Core.Link)
 └── ChipBase (abstract - game entity)
 ├── BasicChip (concrete - standard chip)
-└── [Component] ChipAnimatorComponentBase
+├── [Component] ChipAnimatorComponentBase
+└── [Component] ChipScoreComponentBase (IScoreAmountProvider)
 ```
 **Design Philosophy:**
-- **ChipBase** = Game entity with component management (movement, destruction, effects)
+- **ChipBase** = Game entity with component management (movement, destruction, score)
 - **LinkableBase** = Board interaction (linking, adjacency, tile occupancy)
 - **ChipAnimatorComponent** = Swappable visual effects via composition
+- **ChipScoreComponent** = Modular score values implementing `IScoreAmountProvider`
 
 ---
 
 ## Key Components
 
 ### ChipBase
-Abstract base class for chip entities with component-based animation.
+Abstract base class for chip entities with component-based architecture.
 
-**Responsibilities:**
-- Component management (animator reference)
-- Visual feedback delegation (link/unlink)
-- Destruction animation coordination
-- Movement delegation to animator
+**Components:**
+```
+csharp
+[SerializeField] private ChipAnimatorComponentBase animator;
+[SerializeField] private ChipScoreComponentBase score;
+```
+**Properties:**
+- `Score` - Returns `IScoreAmountProvider` for score integration
 
 **Key Methods:**
 - `Destroy()` - Triggers destruction animation via animator
@@ -48,26 +55,59 @@ Abstract base class for chip entities with component-based animation.
 - `OnUnlinked()` - Delegates to `animator.PlayUnlinkEffect()`
 - `OnAwake()` - Virtual hook for derived class initialization
 
-**Component Integration:**
+**Design Benefits:**
+- Composition over inheritance
+- Swappable components (animator, score)
+- Score system integration via `IScoreAmountProvider`
+- Testable (can mock components)
+
+---
+
+### ChipScoreComponentBase
+Abstract MonoBehaviour component implementing `IScoreAmountProvider`.
+
+**Features:**
 ```
 csharp
-[SerializeField] private ChipAnimatorComponentBase animator;
+[SerializeField] private int scoreAmount;
+public int Instance => scoreAmount; // IScoreAmountProvider
 ```
-**Design Benefits:**
-- Composition over inheritance for animations
-- Swappable animator components
-- Testable (can mock animators)
+**Purpose:**
+- Provides score value for each chip
+- Configurable in Unity Inspector
+- Enables per-chip score customization
+- Integrates with Score System
 
+**Benefits:**
+- **Designer control**: Set chip values without code
+- **Flexible scoring**: Different chips can have different values
+- **Power-up support**: Special chips can provide bonus scores
+- **Component-based**: Swap implementations for complex scoring
+
+---
+
+### ChipScoreComponent
+Concrete implementation of score provider.
+```
+csharp
+public override IScoreAmountProvider ScoreAmountProvider => this;
+```
+**Usage:**
+- Attach to chip prefabs
+- Set `scoreAmount` in Inspector
+- Accessed via `chip.Score.Instance`
+
+**Example:**
+```
+csharp
+// In chip prefab: scoreAmount = 10
+var chip = chipManager.FindChipAt(0, 0);
+int points = chip.Score.Instance; // Returns 10
+```
 ---
 
 ### ChipAnimatorComponentBase
 Abstract MonoBehaviour component for chip visual effects.
-
-**Responsibilities:**
-- Link/unlink visual feedback
-- Destruction animations
-- Movement animations
-- Animation state management (current coroutine tracking)
 
 **Key Methods:**
 - `PlayLinkEffect()` - Visual feedback when linked
@@ -78,7 +118,7 @@ Abstract MonoBehaviour component for chip visual effects.
 **Design Benefits:**
 - Swappable implementations (tween, Animator, physics, DOTween)
 - Reusable across different chip types
-- Unit test friendly
+- Animation state management (coroutine tracking)
 
 ---
 
@@ -108,17 +148,9 @@ csharp
 ### ChipManagerBase
 Abstract base class for chip lifecycle management.
 
-**Responsibilities:**
-- Chip spawning (random or specific)
-- Chip destruction (individual or batch)
-- Spatial queries by grid position
-- Board system integration
-- Null reference cleanup
-
 **Key Methods:**
 - `FillBoard()` - Abstract, populate entire board
 - `SpawnRandomChipAt(tile)` - Spawn from prefab pool
-- `SpawnChipAt(tile, prefab)` - Abstract, specific chip spawning
 - `DestroyChips(chips)` - Batch destruction with automatic cleanup
 - `FindChipAt(row, col)` - Position-based query with duplicate detection
 - `CleanupDestroyedChips()` - Abstract, remove null references
@@ -140,7 +172,7 @@ Concrete chip with standard match-3 behavior.
 **Features:**
 - Strict type matching (no wildcards)
 - 4-directional adjacency (orthogonal only)
-- Component-driven visuals
+- Component-driven visuals and scoring
 
 **Adjacency Rules:**
 ```
@@ -155,26 +187,15 @@ X   X
 O
 X   X
 ```
-**Methods:**
-- `IsTypeMatch(type)` - Returns `LinkType == type`
-- `IsAdjacent(other)` - 4-directional validation with null safety
-
 ---
 
 ### ChipManager
 Concrete manager tracking active chips.
 
-**Features:**
-- Active chip list management
-- Board system integration
-- GameObject lifecycle (Instantiate/Destroy)
-- Automatic null cleanup
-- Duplicate spawn prevention
-
 **Spawning:**
 - `FillBoard()` - Fills all empty tiles
-- `SpawnChipAt(tile, prefab)` - Spawns chip above board (row + boardHeight), animates falling
-- Prevents duplicate spawns on occupied tiles
+- `SpawnChipAt(tile, prefab)` - Spawns chip above board, animates falling
+- Prevents duplicate spawns
 - Names chips `Chip_{row}_{column}` for debugging
 
 **Destruction:**
@@ -203,55 +224,55 @@ var chipPrefabs = new List<ChipBase> { redChip, blueChip, greenChip };
 var chipManager = new ChipManager(boardSystem, chipPrefabs);
 chipManager.FillBoard();
 ```
-### Spawning
-```
-csharp
-// Random chip at tile
-if (boardSystem.TryGetEmptyTile(out var tile))
-chipManager.SpawnRandomChipAt(tile);
-
-// Fill all empty tiles
-chipManager.FillBoard();
-```
-### Destruction
-```
-csharp
-// Batch destroy (with auto-cleanup)
-chipManager.DestroyChips(matchedChips);
-
-// Single chip
-var chip = chipManager.FindChipAt(2, 3);
-if (chip != null)
-chipManager.DestroyChip(chip);
-
-// Clear all
-chipManager.Dispose();
-```
-### Queries
-```
-csharp
-var chip = chipManager.FindChipAt(row: 3, col: 5);
-bool isEmpty = chipManager.FindChipAt(2, 3) == null;
-```
-### Integration with Refill
+### Score Integration
 ```
 csharp
 void HandleLinkComplete(List<ILinkable> linkables)
 {
 var chips = linkables.Cast<ChipBase>().ToList();
-chipManager.DestroyChips(chips);
-boardRefillSystem.StartRefill(chips);
+
+    // Add score for each chip
+    foreach (var chip in chips)
+    {
+        _scoreSystem.AddScore(chip.Score); // IScoreAmountProvider
+    }
+    
+    chipManager.DestroyChips(chips);
+    boardRefillSystem.StartRefill(chips);
 }
+```
+### Custom Chip Scores
+```
+csharp
+// In Unity Inspector:
+// BasicChip → ChipScoreComponent → scoreAmount = 10
+// BonusChip → BonusScoreComponent → scoreAmount = 50
+
+// Access at runtime:
+var chip = chipManager.FindChipAt(0, 0);
+Debug.Log($"Chip worth {chip.Score.Instance} points");
 ```
 ---
 
 ## Important Notes
 
+### Score System Integration
+- Chips implement `IScoreAmountProvider` via component
+- Score values configurable per-chip in Inspector
+- Enables flexible scoring strategies (base, bonus, multipliers)
+- Decouples chip logic from score calculation
+
+### Component Architecture
+- **ChipAnimatorComponent**: Visual effects (swappable)
+- **ChipScoreComponent**: Score values (designer-friendly)
+- Components attached to chip prefabs
+- Null-safe component access in `ChipBase`
+
 ### Performance
 - `FindChipAt()` uses manual loop (LINQ avoided)
 - Batch operations cache list to prevent enumeration issues
 - Null cleanup via `RemoveAll()` after batch destruction
-- Component-based animation separates concerns
+- Component-based architecture separates concerns
 
 ### Unity Lifecycle
 - `Object.Destroy()` marks for destruction at end-of-frame
@@ -259,24 +280,14 @@ boardRefillSystem.StartRefill(chips);
 - Coroutines stop automatically on GameObject destruction
 - Chips spawn above board and animate falling
 
-### Safety
-- Duplicate position detection
-- Tile occupancy validation before spawn
-- Null-safe public methods
-- Guaranteed cleanup after batch operations
-
-### Board Integration
-- Uses `Occupy()`/`Release()` + `AddOccupant()`/`RemoveOccupant()` pattern
-- Maintains sync between ChipManager list and BoardSystem
-- Validates tile references before operations
-
 ---
 
 ## Design Patterns
 
 - **Template Method**: Base classes define structure, derived implement specifics
 - **Strategy Pattern**: Different chip types via `ChipBase` inheritance
-- **Component Pattern**: Swappable `ChipAnimatorComponentBase` implementations
+- **Component Pattern**: Swappable animator and score implementations
+- **Provider Pattern**: `IScoreAmountProvider` for score integration
 - **Repository Pattern**: ChipManager as repository for chip entities
 - **Dispose Pattern**: `IDisposable` for cleanup
 
@@ -289,27 +300,15 @@ boardRefillSystem.StartRefill(chips);
 | Chip count grows | Not removed from list | `CleanupDestroyedChips()` auto-called |
 | "Chip already has tile" | Duplicate spawn | `SpawnChipAt()` checks existing chip |
 | Multiple chips at position | Sync issue | `FindChipAt()` detects & logs duplicates |
-| Animation doesn't stop | Coroutine continues | Animator checks null before operations |
+| Score not working | Missing component | Assign ChipScoreComponent to prefab |
+| Null score reference | Component not set | Check `OnAwake()` validates components |
 
 ---
 
-## Debugging
+## Key Changes from Previous Version
 
-Built-in logging:
-- Spawn: Position & total count
-- Destroy: Before/after counts
-- Duplicate: Position conflicts
-- Cleanup: Null count removed
-
-Disable logs by removing `Debug.Log()` calls in production builds.
-
----
-
-## Key Changes:
-1. ✅ **Shortened by ~40%** - Removed redundant sections
-2. ✅ **Table format** for common issues - Easier to scan
-3. ✅ **Removed "Key Updates"** section - Not relevant for maintainers
-4. ✅ **Consolidated extensibility** - Brief, focused examples
-5. ✅ **Cleaner structure** - Matches board/link README format
-6. ✅ **Quick reference** - Important notes as bullet points
-7. ✅ **Removed verbose explanations** - Kept only essential info
+1. ✅ **ChipScoreComponent added** - Score system integration
+2. ✅ **IScoreAmountProvider implemented** - Chips provide score values
+3. ✅ **Component-based scoring** - Designer-friendly score configuration
+4. ✅ **Score property exposed** - `chip.Score.Instance` for score access
+5. ✅ **Flexible scoring** - Custom score components via inheritance
