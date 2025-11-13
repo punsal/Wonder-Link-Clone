@@ -87,6 +87,27 @@ These systems are designed behind abstract/base types to keep responsibilities s
 
 Note: Namespaces in code (e.g., `Core.Board`, `Gameplay.Systems.MatchDetection`) mirror this modular layout.
 
+## Module READMEs (Scripts)
+
+Quick links to in-folder documentation under `Assets/Scripts`:
+
+- Core
+  - [Board System](Assets/Scripts/Core/Board/README.md) — overview and usage
+  - [CAmera System](Assets/Scripts/Core/Camera/README.md) — overview and usage
+  - [Link System](Assets/Scripts/Core/Link/README.md) — overview and usage
+
+- Gameplay
+  - [Chip System](Assets/Scripts/Gameplay/Chip/README.md) — overview and usage
+  - [Input System](Assets/Scripts/Gameplay/Input/README.md) — overview and usage
+  - [Board Refill System](Assets/Scripts/Gameplay/Systems/BoardRefill/README.md) — overview and usage
+  - [Match Detection System](Assets/Scripts/Gameplay/Systems/MatchDetection/README.md) — overview and usage
+  - [Score System](Assets/Scripts/Gameplay/Systems/Score/README.md) — overview and usage
+  - [Shuffle System](Assets/Scripts/Gameplay/Systems/Shuffle/README.md) — overview and usage
+  - [Turn System](Assets/Scripts/Gameplay/Systems/Turn/README.md) — overview and usage
+
+
+If you add more `README.md` files to other script folders (e.g., Board, Camera, Gameplay systems), list them here using the same relative path format so reviewers can easily navigate.
+
 ## Build and Deployment
 
 1. Open File → Build Settings…
