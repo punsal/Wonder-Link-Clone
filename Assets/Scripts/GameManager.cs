@@ -24,6 +24,9 @@ using Gameplay.Systems.Score.Abstract;
 using Gameplay.Systems.Score.Observable;
 using Gameplay.Systems.Shuffle;
 using Gameplay.Systems.Shuffle.Abstract;
+using Gameplay.Systems.Turn;
+using Gameplay.Systems.Turn.Abstract;
+using Gameplay.Systems.Turn.Observable;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour, ICoroutineRunner
@@ -45,11 +48,13 @@ public class GameManager : MonoBehaviour, ICoroutineRunner
     
     [Header("Gameplay")]
     [SerializeField] private int maxLevelScore = 100;
+    [SerializeField] private int maxPlayerTurn = 10;
     
     [Header("System Configuration")]
     [SerializeField, Range(1, 5)] private int shuffleCountBeforeFailure = 2;
     [SerializeField] private GameScore levelScore;
     [SerializeField] private GameScore playerScore;
+    [SerializeField] private GameTurn playerTurn;
 
     private CameraSystemBase _cameraSystem;
     private BoardSystemBase _boardSystem;
@@ -59,6 +64,7 @@ public class GameManager : MonoBehaviour, ICoroutineRunner
     private MatchDetectionSystemBase _matchDetectionSystem;
     private ShuffleSystemBase _shuffleSystem;
     private ScoreSystemBase _scoreSystem;
+    private TurnSystemBase _turnSystem;
     private InputHandlerBase _inputHandler;
     
     private int _currentShuffleCount;
@@ -73,6 +79,7 @@ public class GameManager : MonoBehaviour, ICoroutineRunner
         CreateMatchDetectionSystem();
         CreateShuffleSystem();
         CreateScoreSystem();
+        CreateTurnSystem();
         CreateInputHandler();
         
         _currentShuffleCount = 0;
@@ -216,6 +223,17 @@ public class GameManager : MonoBehaviour, ICoroutineRunner
         _scoreSystem = new ScoreSystem(levelScore, playerScore);
     }
 
+    private void CreateTurnSystem()
+    {
+        if (!playerTurn)
+        {
+            Debug.LogError("Player turn is null, creating default");
+            playerTurn = ScriptableObject.CreateInstance<GameTurn>();
+        }
+
+        _turnSystem = new TurnSystem(playerTurn, maxPlayerTurn);
+    }
+
     private void CreateInputHandler()
     {
 #if UNITY_EDITOR
@@ -237,6 +255,9 @@ public class GameManager : MonoBehaviour, ICoroutineRunner
         // Disable input during refill sequence
         _inputHandler.Disable();
         
+        // update turn count
+        _turnSystem.FinishTurn();
+        
         // copy linkables to a new list of chips to process
         var chips = linkables.Cast<ChipBase>().ToList();
 
@@ -256,6 +277,13 @@ public class GameManager : MonoBehaviour, ICoroutineRunner
         if (_scoreSystem.IsScoreReached)
         {
             Debug.Log("Level completed!");
+            return;
+        }
+        
+        // check if there are remaining turns
+        if (!_turnSystem.IsTurnAvailable)
+        {
+            Debug.Log("No more turns available");
             return;
         }
         
