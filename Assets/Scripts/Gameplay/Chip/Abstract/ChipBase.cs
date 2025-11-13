@@ -1,5 +1,6 @@
 using Core.Link.Abstract;
 using Gameplay.Chip.Components.Abstract;
+using Gameplay.Systems.Score.Amount.Interface;
 using UnityEngine;
 
 namespace Gameplay.Chip.Abstract
@@ -13,6 +14,9 @@ namespace Gameplay.Chip.Abstract
     {
         [Header("Components")]
         [SerializeField] private ChipAnimatorComponentBase animator;
+        [SerializeField] private ChipScoreComponentBase score;
+        
+        public IScoreAmountProvider Score => score;
         
         private void Awake()
         {
