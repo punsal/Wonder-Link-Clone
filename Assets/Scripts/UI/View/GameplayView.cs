@@ -93,17 +93,20 @@ namespace UI.View
 
         private void OnLevelScoreValueChanged(int newValue)
         {
-            levelScoreText.text = newValue.ToString();
+            var text = $"Level Score: {newValue}";
+            levelScoreText.text = text;
         }
         
         private void OnPlayerScoreValueChanged(int newValue)
         {
-            playerScoreText.text = newValue.ToString();
+            var text = $"Player Score: {newValue}";
+            playerScoreText.text = text;
         }
         
         private void OnPlayerTurnValueChanged(int newValue)
         {
-            remainingTurnText.text = newValue.ToString();
+            var text = $"Remaining Turn: {newValue}";
+            remainingTurnText.text = text;
         }
     }
 }
