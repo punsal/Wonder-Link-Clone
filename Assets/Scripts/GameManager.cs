@@ -7,6 +7,7 @@ using Core.Camera;
 using Core.Camera.Abstract;
 using Core.Camera.Provider;
 using Core.Camera.Provider.Abstract;
+using Core.Event;
 using Core.Link;
 using Core.Link.Abstract;
 using Core.Link.Interface;
@@ -51,10 +52,17 @@ public class GameManager : MonoBehaviour, ICoroutineRunner
     [SerializeField] private int maxPlayerTurn = 10;
     
     [Header("System Configuration")]
-    [SerializeField, Range(1, 5)] private int shuffleCountBeforeFailure = 2;
+    [SerializeField, Range(2, 5)] private int shuffleCountBeforeFailure = 2;
     [SerializeField] private GameScore levelScore;
     [SerializeField] private GameScore playerScore;
     [SerializeField] private GameTurn playerTurn;
+    
+    [Header("Events")]
+    [SerializeField] private GameEvent startGameEvent;
+    [SerializeField] private GameEvent noMoreTurnsEvent;
+    [SerializeField] private GameEvent levelCompletedEvent;
+    [SerializeField] private GameEvent shuffleFailedEvent;
+    [SerializeField] private GameEvent nextGameEvent;
 
     private CameraSystemBase _cameraSystem;
     private BoardSystemBase _boardSystem;
@@ -71,6 +79,32 @@ public class GameManager : MonoBehaviour, ICoroutineRunner
     
     private void Awake()
     {
+        CreateSystems();
+    }
+    
+    private void OnEnable()
+    {
+        SubscribeToEvents();
+    }
+
+    private void Start()
+    {
+        CreateGameplay();
+    }
+
+    private void Update()
+    {
+        _inputHandler?.Update();
+    }
+
+    private void OnDisable()
+    {
+        UnsubscribeFromEvents();
+        DestroySystems();
+    }
+
+    private void CreateSystems()
+    {
         CreateGameCameraSystem();
         CreateBoardSystem();
         CreateLinkSystem();
@@ -80,25 +114,16 @@ public class GameManager : MonoBehaviour, ICoroutineRunner
         CreateShuffleSystem();
         CreateScoreSystem();
         CreateTurnSystem();
-        CreateInputHandler();
-        
-        _currentShuffleCount = 0;
-    }
-    
-    private void OnEnable()
-    {
-        _boardSystem.Initialize();
-        
-        _linkSystem.OnLinkCompleted += HandleLinkCompleted;
-        _boardRefillSystem.OnRefillCompleted += HandleRefillCompleted;
-        _shuffleSystem.OnShuffleCompleted += HandleShuffleCompleted;
+        CreateInputHandler();   
     }
 
-    private void Start()
+    private void CreateGameplay()
     {
+        _currentShuffleCount = 0;
+        
+        _boardSystem.Initialize();
         _chipManager.FillBoard();
         _cameraSystem.CenterOnBoard(rowCount, columnCount);
-        _inputHandler.Enable();
 
         if (!ShouldShuffle())
         {
@@ -110,19 +135,35 @@ public class GameManager : MonoBehaviour, ICoroutineRunner
         _shuffleSystem.StartShuffle();
     }
 
-    private void Update()
+    private void DestroySystems()
     {
-        _inputHandler?.Update();
+        _turnSystem.Dispose();
+        _scoreSystem.Dispose();
+        _shuffleSystem.Dispose();
+        _boardRefillSystem.Dispose();
+        _chipManager.Dispose();
+        _linkSystem.Dispose();
+        _boardSystem.Dispose();
     }
 
-    private void OnDisable()
+    private void SubscribeToEvents()
+    {
+        _linkSystem.OnLinkCompleted += HandleLinkCompleted;
+        _boardRefillSystem.OnRefillCompleted += HandleRefillCompleted;
+        _shuffleSystem.OnShuffleCompleted += HandleShuffleCompleted;
+        
+        startGameEvent.OnEventRaised += HandleGameStartEvent;
+        nextGameEvent.OnEventRaised += HandleNextGameEvent;
+    }
+
+    private void UnsubscribeFromEvents()
     {
         _linkSystem.OnLinkCompleted -= HandleLinkCompleted;
         _boardRefillSystem.OnRefillCompleted -= HandleRefillCompleted;
         _shuffleSystem.OnShuffleCompleted -= HandleShuffleCompleted;
         
-        _chipManager.Dispose();
-        _boardSystem.Dispose();
+        startGameEvent.OnEventRaised -= HandleGameStartEvent;
+        nextGameEvent.OnEventRaised -= HandleNextGameEvent;
     }
 
     private void CreateGameCameraSystem()
@@ -246,6 +287,7 @@ public class GameManager : MonoBehaviour, ICoroutineRunner
         _inputHandler = new MouseInputHandler(_linkSystem);
         Debug.Log("Using MouseInputHandler for other platforms");
 #endif
+        _inputHandler.Disable();
     }
 
     private void HandleLinkCompleted(List<ILinkable> linkables)
@@ -277,6 +319,7 @@ public class GameManager : MonoBehaviour, ICoroutineRunner
         if (_scoreSystem.IsScoreReached)
         {
             Debug.Log("Level completed!");
+            levelCompletedEvent.Raise();
             return;
         }
         
@@ -284,6 +327,7 @@ public class GameManager : MonoBehaviour, ICoroutineRunner
         if (!_turnSystem.IsTurnAvailable)
         {
             Debug.Log("No more turns available");
+            noMoreTurnsEvent.Raise();
             return;
         }
         
@@ -323,11 +367,36 @@ public class GameManager : MonoBehaviour, ICoroutineRunner
             }
             
             Debug.Log("No possible moves detected, shuffle failed. No more attempts.");
+            shuffleFailedEvent.Raise();
             return;
         }
         
         Debug.Log("Shuffle succeed.");
         _inputHandler.Enable();
+    }
+
+    private void HandleGameStartEvent()
+    {
+        _inputHandler.Enable();
+    }
+
+    private void HandleNextGameEvent()
+    {
+        Replay();
+    }
+
+    private void Replay()
+    {
+        Debug.Log("Stopping current game, destroying systems");
+        UnsubscribeFromEvents();
+        DestroySystems();
+        
+        Debug.Log("Starting next game");
+        CreateSystems();
+        SubscribeToEvents();
+        CreateGameplay();
+        
+        Debug.Log("Next game ready");
     }
     
     [ContextMenu("Debug Chip Count")]
