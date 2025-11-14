@@ -2,6 +2,14 @@
 
 A minimalist, open-source take on a link-match puzzle game built with Unity. Connect adjacent chips of the same type to score points before you run out of turns. The project is structured as a clean, modular example featuring camera, board, linking, refill, shuffle, score, and turn systems.
 
+### Planning
+If you like, you can review the personal Trello board to see:
+- Logic splitting
+- Workflow tracking
+- Git commits have related ticket IDs for easier review
+
+Trello Board: [link](https://trello.com/invite/b/690e3584fe57bd4d0ecf57c4/ATTI9db24b1974d891aaae94f31da5c383de22C1540C/wonder-link-clone)
+
 ## Highlights
 
 - Link-to-match gameplay loop (drag to connect adjacent, same-type chips)
